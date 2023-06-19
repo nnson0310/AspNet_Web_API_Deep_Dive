@@ -11,13 +11,15 @@ internal static class StartupHelperExtensions
     {
         builder.Services.AddControllers();
 
-        builder.Services.AddScoped<ICourseLibraryRepository, 
+        builder.Services.AddScoped<ICourseLibraryRepository,
             CourseLibraryRepository>();
 
         builder.Services.AddDbContext<CourseLibraryContext>(options =>
         {
             options.UseSqlite(@"Data Source=library.db");
         });
+
+        builder.Services.AddLogging();
 
         builder.Services.AddAutoMapper(
             AppDomain.CurrentDomain.GetAssemblies());
@@ -27,17 +29,17 @@ internal static class StartupHelperExtensions
 
     // Configure the request/response pipelien
     public static WebApplication ConfigurePipeline(this WebApplication app)
-    { 
+    {
         if (app.Environment.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
         }
- 
+
         app.UseAuthorization();
 
-        app.MapControllers(); 
-         
-        return app; 
+        app.MapControllers();
+
+        return app;
     }
 
     public static async Task ResetDatabaseAsync(this WebApplication app)
@@ -55,9 +57,8 @@ internal static class StartupHelperExtensions
             }
             catch (Exception ex)
             {
-                var logger = scope.ServiceProvider.GetRequiredService<ILogger>();
-                logger.LogError(ex, "An error occurred while migrating the database.");
+                Console.WriteLine("An error occurred while migrating the database.");
             }
-        } 
+        }
     }
 }
