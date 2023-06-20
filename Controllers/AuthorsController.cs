@@ -22,7 +22,7 @@ public class AuthorsController : ControllerBase
             throw new ArgumentNullException(nameof(mapper));
     }
 
-    [HttpPost("api/author")] 
+    [HttpPost("api/author/all")] 
     public async Task<ActionResult<IEnumerable<AuthorDto>>> GetAuthors()
     { 
         // get authors from repo
@@ -48,7 +48,7 @@ public class AuthorsController : ControllerBase
         return Ok(_mapper.Map<AuthorDto>(authorFromRepo));
     }
 
-    [HttpPost("api/authors")]
+    [HttpPost("api/author/create")]
     public async Task<ActionResult<AuthorDto>> CreateAuthor(AuthorForCreationDto author)
     {
         var authorEntity = _mapper.Map<Entities.Author>(author);
@@ -61,5 +61,12 @@ public class AuthorsController : ControllerBase
         return CreatedAtRoute("GetAuthor",
             new { authorId = authorToReturn.Id },
             authorToReturn);
+    }
+
+    [HttpOptions("/api/authors")]
+    public ActionResult GetAuthorsOptions()
+    {
+        Response.Headers.Add("Allow", "GET, HEAD, POST, OPTIONS");
+        return Ok();
     }
 }

@@ -9,10 +9,10 @@ public class Course
     public Guid Id { get; set; }
      
     [Required]
-    [MaxLength(100)]
+    [MaxLength(50)]
     public string Title { get; set; }
 
-    [MaxLength(1500)]
+    [MaxLength(100)]
     public string? Description { get; set; }
 
     [ForeignKey("AuthorId")]
