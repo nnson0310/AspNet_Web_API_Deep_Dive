@@ -1,4 +1,4 @@
-﻿using CourseLibrary.API.Entities; 
+﻿using CourseLibrary.API.Entities;
 
 namespace CourseLibrary.API.Services;
 
@@ -9,6 +9,7 @@ public interface ICourseLibraryRepository
     void AddCourse(Guid authorId, Course course);
     void UpdateCourse(Course course);
     void DeleteCourse(Course course);
+    Task<IEnumerable<Author>> GetAuthorsAsync(string? mainCategory, string? searchQuery);
     Task<IEnumerable<Author>> GetAuthorsAsync();
     Task<Author> GetAuthorAsync(Guid authorId);
     Task<IEnumerable<Author>> GetAuthorsAsync(IEnumerable<Guid> authorIds);

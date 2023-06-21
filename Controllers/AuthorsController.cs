@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CourseLibrary.API.Controllers;
 
-[ApiController] 
+[ApiController]
 public class AuthorsController : ControllerBase
 {
     private readonly ICourseLibraryRepository _courseLibraryRepository;
@@ -22,12 +22,13 @@ public class AuthorsController : ControllerBase
             throw new ArgumentNullException(nameof(mapper));
     }
 
-    [HttpPost("api/author/all")] 
-    public async Task<ActionResult<IEnumerable<AuthorDto>>> GetAuthors()
-    { 
+    [HttpPost("api/author/all")]
+    public async Task<ActionResult<IEnumerable<AuthorDto>>> GetAuthors(
+        [FromQuery] string? mainCategory, string? searchQuery)
+    {
         // get authors from repo
         var authorsFromRepo = await _courseLibraryRepository
-            .GetAuthorsAsync(); 
+            .GetAuthorsAsync(mainCategory, searchQuery);
 
         // return them
         return Ok(_mapper.Map<IEnumerable<AuthorDto>>(authorsFromRepo));
