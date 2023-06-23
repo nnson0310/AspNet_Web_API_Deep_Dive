@@ -1,5 +1,7 @@
 ﻿using CourseLibrary.API.DbContexts;
 using CourseLibrary.API.Entities;
+using CourseLibrary.API.Helpers;
+using CourseLibrary.API.Profiles;
 using Microsoft.EntityFrameworkCore;
 
 namespace CourseLibrary.API.Services;
@@ -126,27 +128,27 @@ public class CourseLibraryRepository : ICourseLibraryRepository
         return await _context.Authors.ToListAsync();
     }
 
-    public async Task<IEnumerable<Author>> GetAuthorsAsync(string? mainCategory, string? searchQuery)
+    public async Task<PagedList<Author>> GetAuthorsAsync(AuthorResourcesParameters authorResourcesParameters)
     {
-        if (string.IsNullOrWhiteSpace(mainCategory) && string.IsNullOrWhiteSpace(searchQuery))
+        if (authorResourcesParameters is null)
         {
-            return await GetAuthorsAsync();
+            throw new ArgumentNullException(nameof(authorResourcesParameters));
         }
 
         var collection = _context.Authors as IQueryable<Author>;
 
-        if (!string.IsNullOrWhiteSpace(mainCategory))
+        if (!string.IsNullOrWhiteSpace(authorResourcesParameters.MainCategory))
         {
-            collection = collection.Where(a => a.MainCategory == mainCategory.Trim());
+            collection = collection.Where(a => a.MainCategory == authorResourcesParameters.MainCategory.Trim());
         }
 
-        if (!string.IsNullOrWhiteSpace(searchQuery))
+        if (!string.IsNullOrWhiteSpace(authorResourcesParameters.SearchQuery))
         {
-            searchQuery = searchQuery.Trim();
-            collection = collection.Where(a => a.FirstName.Contains(searchQuery) || a.LastName.Contains(searchQuery) || a.MainCategory.Contains(searchQuery));
+            var queryString = authorResourcesParameters.SearchQuery.Trim();
+            collection = collection.Where(a => a.FirstName.Contains(queryString) || a.LastName.Contains(queryString) || a.MainCategory.Contains(queryString));
         }
 
-        return await collection.ToListAsync();
+        return await PagedList<Author>.CreateListAsync(collection, authorResourcesParameters.PageNumber, authorResourcesParameters.PageSize);
     }
 
     public async Task<IEnumerable<Author>> GetAuthorsAsync(IEnumerable<Guid> authorIds)
