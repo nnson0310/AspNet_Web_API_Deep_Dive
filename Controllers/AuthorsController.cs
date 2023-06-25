@@ -36,14 +36,17 @@ public class AuthorsController : ControllerBase
         var authorsFromRepo = await _courseLibraryRepository
             .GetAuthorsAsync(authorResourcesParameters);
 
-        var previousPageLink = authorsFromRepo.HasPrevious ? createPaginationMetaData(HasPage.HasPrevious, authorResourcesParameters) : null;
-        var nextPageLink = authorsFromRepo.HasPrevious ? createPaginationMetaData(HasPage.HasNext, authorResourcesParameters) : null;
+        var previousPageLink = authorsFromRepo.HasPrevious ? CreatePaginationMetaData(HasPage.HasPrevious, authorResourcesParameters) : null;
+        var nextPageLink = authorsFromRepo.HasNext ? CreatePaginationMetaData(HasPage.HasNext, authorResourcesParameters) : null;
 
         var paginationMetaData = new
         {
             totalCount = authorsFromRepo.TotalCount,
-            previousPageLink = previousPageLink,
-            nextPageLink = nextPageLink
+            pageSize = authorsFromRepo.PageSize,
+            totalPages = authorsFromRepo.TotalPages,
+            currentPage = authorsFromRepo.CurrentPage,
+            previousPageLink,
+            nextPageLink
         };
 
         Response.Headers.Add("X-Pagination", JsonSerializer.Serialize(paginationMetaData));
@@ -52,27 +55,26 @@ public class AuthorsController : ControllerBase
         return Ok(_mapper.Map<IEnumerable<AuthorDto>>(authorsFromRepo));
     }
 
-    private string? createPaginationMetaData(HasPage type, AuthorResourcesParameters authorResourcesParameters)
+    private string? CreatePaginationMetaData(HasPage type, AuthorResourcesParameters authorResourcesParameters)
     {
-        switch (type)
+        return type switch
         {
-            case HasPage.HasPrevious:
-                return Url.Link("GetAllAuthors", new
-                {
-                    pageNumber = authorResourcesParameters.PageNumber - 1,
-                    pageSize = authorResourcesParameters.PageSize,
-                    mainCategory = authorResourcesParameters.MainCategory,
-                    searchQuery = authorResourcesParameters.SearchQuery
-                });
-            default:
-                return Url.Link("GetAllAuthors", new
-                {
-                    pageNumber = authorResourcesParameters.PageNumber + 1,
-                    pageSize = authorResourcesParameters.PageSize,
-                    mainCategory = authorResourcesParameters.MainCategory,
-                    searchQuery = authorResourcesParameters.SearchQuery
-                });
-        }
+            HasPage.HasPrevious => Url.Link("GetAllAuthors", new
+            {
+                pageNumber = authorResourcesParameters.PageNumber - 1,
+                pageSize = authorResourcesParameters.PageSize,
+                mainCategory = authorResourcesParameters.MainCategory,
+                searchQuery = authorResourcesParameters.SearchQuery
+            }),
+            HasPage.HasNext => Url.Link("GetAllAuthors", new
+            {
+                pageNumber = authorResourcesParameters.PageNumber + 1,
+                pageSize = authorResourcesParameters.PageSize,
+                mainCategory = authorResourcesParameters.MainCategory,
+                searchQuery = authorResourcesParameters.SearchQuery
+            }),
+            _ => null,
+        };
     }
 
     [HttpGet("api/author/{authorId}", Name = "GetAuthor")]

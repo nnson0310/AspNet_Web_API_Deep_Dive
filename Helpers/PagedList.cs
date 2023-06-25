@@ -12,32 +12,26 @@ namespace CourseLibrary.API.Helpers
 
         public int TotalCount { get; private set; }
 
-        public bool HasNext
-        {
-            get => CurrentPage < TotalPages;
-        }
+        public bool HasNext => CurrentPage < TotalPages;
 
-        public bool HasPrevious
-        {
-            get => CurrentPage > 1;
-        }
+        public bool HasPrevious => CurrentPage > 1 && CurrentPage <= TotalPages + 1;
 
-        private PagedList(List<T> items, int currentPage, int pageSize)
+        private PagedList(List<T> items, int count, int pageNumber, int pageSize)
         {
-            TotalCount = items.Count();
+            TotalCount = count;
             PageSize = pageSize;
-            CurrentPage = currentPage;
+            CurrentPage = pageNumber;
             TotalPages = (int)Math.Ceiling((double)TotalCount / PageSize);
             AddRange(items);
         }
 
-        public static async Task<PagedList<T>> CreateListAsync(IQueryable<T> collection, int currentPage, int pageSize)
+        public static async Task<PagedList<T>> CreateListAsync(IQueryable<T> collection, int pageNumber, int pageSize)
         {
             var items = await collection
-                .Skip(pageSize * (currentPage - 1))
+                .Skip(pageSize * (pageNumber - 1))
                 .Take(pageSize).ToListAsync();
 
-            return new PagedList<T>(items, currentPage, pageSize);
+            return new PagedList<T>(items, collection.Count(), pageNumber, pageSize);
         }
     }
 }
