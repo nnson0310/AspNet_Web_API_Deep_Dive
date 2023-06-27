@@ -1,12 +1,10 @@
-﻿
-using AutoMapper;
-using CourseLibrary.API.Entities;
+﻿using AutoMapper;
 using CourseLibrary.API.Helpers;
 using CourseLibrary.API.Models;
 using CourseLibrary.API.Profiles;
 using CourseLibrary.API.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.Text;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using System.Text.Json;
 
 namespace CourseLibrary.API.Controllers;
@@ -16,21 +14,34 @@ public class AuthorsController : ControllerBase
 {
     private readonly ICourseLibraryRepository _courseLibraryRepository;
     private readonly IMapper _mapper;
+    private readonly IPropCheckerService _propCheckerService;
+    private readonly ProblemDetailsFactory _problemDetailsFactory;
 
     public AuthorsController(
         ICourseLibraryRepository courseLibraryRepository,
-        IMapper mapper)
+        IMapper mapper,
+        IPropCheckerService propCheckerService,
+        ProblemDetailsFactory problemDetailsFactory)
     {
         _courseLibraryRepository = courseLibraryRepository ??
             throw new ArgumentNullException(nameof(courseLibraryRepository));
         _mapper = mapper ??
             throw new ArgumentNullException(nameof(mapper));
+        _propCheckerService = propCheckerService ?? throw new ArgumentNullException(nameof(propCheckerService));
+        _problemDetailsFactory = problemDetailsFactory ?? throw new ArgumentNullException(nameof(problemDetailsFactory));
     }
 
     [HttpGet("api/author/all", Name = "GetAllAuthors")]
-    public async Task<ActionResult<IEnumerable<AuthorDto>>> GetAuthors(
+    public async Task<IActionResult> GetAuthors(
         [FromQuery] AuthorResourcesParameters authorResourcesParameters)
     {
+        if (!_propCheckerService.TypeHasProperties<AuthorDto>(authorResourcesParameters.Fields))
+        {
+            return BadRequest(_problemDetailsFactory.CreateProblemDetails(
+                HttpContext,
+                statusCode: 400,
+                detail: $"Not all request data shaping exist on resources {authorResourcesParameters.Fields}"));
+        }
 
         // get authors from repo
         var authorsFromRepo = await _courseLibraryRepository
@@ -52,7 +63,7 @@ public class AuthorsController : ControllerBase
         Response.Headers.Add("X-Pagination", JsonSerializer.Serialize(paginationMetaData));
 
         // return them
-        return Ok(_mapper.Map<IEnumerable<AuthorDto>>(authorsFromRepo));
+        return Ok(_mapper.Map<IEnumerable<AuthorDto>>(authorsFromRepo).ShapeData(authorResourcesParameters.Fields));
     }
 
     private string? CreatePaginationMetaData(HasPage type, AuthorResourcesParameters authorResourcesParameters)
@@ -61,6 +72,7 @@ public class AuthorsController : ControllerBase
         {
             HasPage.HasPrevious => Url.Link("GetAllAuthors", new
             {
+                fields = authorResourcesParameters.Fields,
                 pageNumber = authorResourcesParameters.PageNumber - 1,
                 pageSize = authorResourcesParameters.PageSize,
                 mainCategory = authorResourcesParameters.MainCategory,
@@ -68,6 +80,7 @@ public class AuthorsController : ControllerBase
             }),
             HasPage.HasNext => Url.Link("GetAllAuthors", new
             {
+                fields = authorResourcesParameters.Fields,
                 pageNumber = authorResourcesParameters.PageNumber + 1,
                 pageSize = authorResourcesParameters.PageSize,
                 mainCategory = authorResourcesParameters.MainCategory,
@@ -78,8 +91,16 @@ public class AuthorsController : ControllerBase
     }
 
     [HttpGet("api/author/{authorId}", Name = "GetAuthor")]
-    public async Task<ActionResult<AuthorDto>> GetAuthor(Guid authorId)
+    public async Task<IActionResult> GetAuthor(Guid authorId, string? fields)
     {
+        if (!_propCheckerService.TypeHasProperties<AuthorDto>(fields))
+        {
+            return BadRequest(_problemDetailsFactory.CreateProblemDetails(
+                HttpContext,
+                statusCode: 400,
+                detail: $"Not all request data shaping exist on resources {fields}"));
+        }
+
         // get author from repo
         var authorFromRepo = await _courseLibraryRepository.GetAuthorAsync(authorId);
 
@@ -89,7 +110,7 @@ public class AuthorsController : ControllerBase
         }
 
         // return author
-        return Ok(_mapper.Map<AuthorDto>(authorFromRepo));
+        return Ok(_mapper.Map<AuthorDto>(authorFromRepo).ShapeData(fields));
     }
 
     [HttpPost("api/author/create")]

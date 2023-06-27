@@ -41,6 +41,8 @@ internal static class StartupHelperExtensions
 
         builder.Services.AddTransient<IPropMappingService, PropMappingService>();
 
+        builder.Services.AddTransient<IPropCheckerService, PropCheckerService>();
+
         builder.Services.AddScoped<ICourseLibraryRepository,
             CourseLibraryRepository>();
 

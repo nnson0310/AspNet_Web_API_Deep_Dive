@@ -2,10 +2,10 @@
 using System.Reflection;
 
 namespace CourseLibrary.API.Helpers;
-public static class IEnumerableExtensions
+public static class ObjectExtension
 {
-    public static IEnumerable<ExpandoObject> ShapeData<TSource>(
-        this IEnumerable<TSource> source,
+    public static ExpandoObject ShapeData<TSource>(
+        this TSource source,
         string? fields)
     {
         if (source == null)
@@ -13,8 +13,7 @@ public static class IEnumerableExtensions
             throw new ArgumentNullException(nameof(source));
         }
 
-        var expandoObjectList = new List<ExpandoObject>();
-        var propertyInfoList = new List<PropertyInfo>();
+        var dataShapedObj = new ExpandoObject();
 
         if (string.IsNullOrWhiteSpace(fields))
         {
@@ -22,7 +21,12 @@ public static class IEnumerableExtensions
                 BindingFlags.Public |
                 BindingFlags.IgnoreCase |
                 BindingFlags.Instance);
-            propertyInfoList.AddRange(propertyInfos);
+            foreach (var propertyInfo in propertyInfos)
+            {
+                var propertyValue = propertyInfo.GetValue(source, null);
+
+                ((IDictionary<string, object?>)dataShapedObj).Add(propertyInfo.Name, propertyValue);
+            }
         }
         else
         {
@@ -37,24 +41,13 @@ public static class IEnumerableExtensions
                 {
                     throw new ArgumentNullException($"{fieldName} does not exist.");
                 }
-                propertyInfoList.Add(propertyInfo);
+                var propertyValue = propertyInfo.GetValue(source, null);
+
+                ((IDictionary<string, object?>)dataShapedObj).Add(propertyInfo.Name, propertyValue);
             }
         }
 
-        foreach (TSource item in source)
-        {
-            var dataShapedObject = new ExpandoObject();
-
-            foreach (var propertyInfo in propertyInfoList)
-            {
-                var propValue = propertyInfo.GetValue(item, null);
-                ((IDictionary<string, object?>)dataShapedObject).Add(propertyInfo.Name, propValue);
-            }
-
-            expandoObjectList.Add(dataShapedObject);
-        }
-
-        return expandoObjectList;
+        return dataShapedObj;
     }
 }
 

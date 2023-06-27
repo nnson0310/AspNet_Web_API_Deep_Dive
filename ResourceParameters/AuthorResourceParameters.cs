@@ -14,6 +14,8 @@ public class AuthorResourcesParameters
 
     public string OrderBy { get; set; } = "Name";
 
+    public string? Fields { get; set;}
+
     public int PageSize
     {
         get => _pageSize;
