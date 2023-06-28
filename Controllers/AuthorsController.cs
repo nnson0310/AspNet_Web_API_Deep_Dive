@@ -86,6 +86,14 @@ public class AuthorsController : ControllerBase
                 mainCategory = authorResourcesParameters.MainCategory,
                 searchQuery = authorResourcesParameters.SearchQuery
             }),
+            HasPage.Current => Url.Link("GetAllAuthors", new
+            {
+                fields = authorResourcesParameters.Fields,
+                pageNumber = authorResourcesParameters.PageNumber,
+                pageSize = authorResourcesParameters.PageSize,
+                mainCategory = authorResourcesParameters.MainCategory,
+                searchQuery = authorResourcesParameters.SearchQuery
+            }),
             _ => null,
         };
     }
@@ -109,8 +117,13 @@ public class AuthorsController : ControllerBase
             return NotFound();
         }
 
+        var linkResources = CreateLinkForAuthor(authorId, fields);
+
+        var returnResources = _mapper.Map<AuthorDto>(authorFromRepo).ShapeData(fields) as IDictionary<string, object>;
+        returnResources.Add("links", linkResources);
+
         // return author
-        return Ok(_mapper.Map<AuthorDto>(authorFromRepo).ShapeData(fields));
+        return Ok(returnResources);
     }
 
     [HttpPost("api/author/create")]
@@ -122,10 +135,13 @@ public class AuthorsController : ControllerBase
         await _courseLibraryRepository.SaveAsync();
 
         var authorToReturn = _mapper.Map<AuthorDto>(authorEntity);
+        var links = CreateLinkForAuthor(authorToReturn.Id, null);
+        var linkResources = authorToReturn.ShapeData(null) as IDictionary<string, object?>;
+        linkResources.Add("links", links);
 
         return CreatedAtRoute("GetAuthor",
-            new { authorId = authorToReturn.Id },
-            authorToReturn);
+            new { authorId = linkResources["Id"] },
+            linkResources);
     }
 
     [HttpOptions("/api/authors")]
@@ -133,5 +149,31 @@ public class AuthorsController : ControllerBase
     {
         Response.Headers.Add("Allow", "GET, HEAD, POST, OPTIONS");
         return Ok();
+    }
+
+    private IEnumerable<LinkDto> CreateLinkForAuthor(Guid authorId, string? fields)
+    {
+        var links = new List<LinkDto>();
+        if (string.IsNullOrWhiteSpace(fields))
+        {
+            links.Add(new(Url.Link("GetAuthor", new { authorId }), "self", "GET"));
+        }
+        else
+        {
+            links.Add(new(Url.Link("GetAuthor", new { authorId, fields }), "self", "GET"));
+        }
+
+        links.Add(new(Url.Link("CreateCourseForAuthor", new { authorId }), "create-course", "POST"));
+
+        links.Add(new(Url.Link("GetCoursesForAuthor", new { authorId }), "get-courses", "GET"));
+
+        return links;
+    }
+
+    private IEnumerable<LinkDto> CreateLinkForAuthors(AuthorResourcesParameters authorResourcesParameters)
+    {
+        var links = new List<LinkDto>();
+
+        return links;
     }
 }

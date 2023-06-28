@@ -2,6 +2,6 @@
 {
     public enum HasPage
     {
-        HasPrevious, HasNext
+        HasPrevious, HasNext, Current
     }
 }
