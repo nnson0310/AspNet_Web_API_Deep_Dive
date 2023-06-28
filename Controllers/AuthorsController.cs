@@ -47,23 +47,36 @@ public class AuthorsController : ControllerBase
         var authorsFromRepo = await _courseLibraryRepository
             .GetAuthorsAsync(authorResourcesParameters);
 
-        var previousPageLink = authorsFromRepo.HasPrevious ? CreatePaginationMetaData(HasPage.HasPrevious, authorResourcesParameters) : null;
-        var nextPageLink = authorsFromRepo.HasNext ? CreatePaginationMetaData(HasPage.HasNext, authorResourcesParameters) : null;
-
         var paginationMetaData = new
         {
             totalCount = authorsFromRepo.TotalCount,
             pageSize = authorsFromRepo.PageSize,
             totalPages = authorsFromRepo.TotalPages,
             currentPage = authorsFromRepo.CurrentPage,
-            previousPageLink,
-            nextPageLink
         };
 
         Response.Headers.Add("X-Pagination", JsonSerializer.Serialize(paginationMetaData));
 
+        //create links
+        var links = CreateLinkForAuthors(authorResourcesParameters, authorsFromRepo.HasNext, authorsFromRepo.HasPrevious);
+        var shapedAuthors = _mapper.Map<IEnumerable<AuthorDto>>(authorsFromRepo).ShapeData(authorResourcesParameters.Fields);
+
+        var shapedAuthorWithLinks = shapedAuthors.Select(author =>
+        {
+            var authorAsDictionary = author as IDictionary<string, object?>;
+            var authorLinks = CreateLinkForAuthor((Guid)authorAsDictionary["Id"]!, null);
+            authorAsDictionary.Add("links", authorLinks);
+            return authorAsDictionary;
+        });
+
+        var linkedCollectionResources = new
+        {
+            value = shapedAuthorWithLinks,
+            links = links
+        };
+
         // return them
-        return Ok(_mapper.Map<IEnumerable<AuthorDto>>(authorsFromRepo).ShapeData(authorResourcesParameters.Fields));
+        return Ok(linkedCollectionResources);
     }
 
     private string? CreatePaginationMetaData(HasPage type, AuthorResourcesParameters authorResourcesParameters)
@@ -170,9 +183,24 @@ public class AuthorsController : ControllerBase
         return links;
     }
 
-    private IEnumerable<LinkDto> CreateLinkForAuthors(AuthorResourcesParameters authorResourcesParameters)
+    private IEnumerable<LinkDto> CreateLinkForAuthors(
+        AuthorResourcesParameters authorResourcesParameters,
+        bool hasNext,
+        bool hasPrevious)
     {
         var links = new List<LinkDto>();
+
+        links.Add(new(CreatePaginationMetaData(HasPage.Current, authorResourcesParameters), "self", "GET"));
+
+        if (hasNext)
+        {
+            links.Add(new(CreatePaginationMetaData(HasPage.HasNext, authorResourcesParameters), "next-page", "GET"));
+        }
+
+        if (hasPrevious)
+        {
+            links.Add(new(CreatePaginationMetaData(HasPage.HasPrevious, authorResourcesParameters), "previous-page", "GET"));
+        }
 
         return links;
     }
