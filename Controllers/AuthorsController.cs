@@ -1,10 +1,12 @@
 ﻿using AutoMapper;
+using CourseLibrary.API.Entities;
 using CourseLibrary.API.Helpers;
 using CourseLibrary.API.Models;
 using CourseLibrary.API.Profiles;
 using CourseLibrary.API.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using System.Net.Http.Headers;
 using System.Text.Json;
 
 namespace CourseLibrary.API.Controllers;
@@ -112,8 +114,19 @@ public class AuthorsController : ControllerBase
     }
 
     [HttpGet("api/author/{authorId}", Name = "GetAuthor")]
-    public async Task<IActionResult> GetAuthor(Guid authorId, string? fields)
+    public async Task<IActionResult> GetAuthor(
+        Guid authorId,
+        string? fields,
+        [FromHeader(Name = "Accept")] string? mediaType)
     {
+        if (!MediaTypeHeaderValue.TryParse(mediaType, out var mediaTypeHeaderValue))
+        {
+            return BadRequest(_problemDetailsFactory.CreateProblemDetails(
+                HttpContext,
+                statusCode: 400,
+                detail: $"Accept header media type = '{mediaType}' is not valid"));
+        }
+
         if (!_propCheckerService.TypeHasProperties<AuthorDto>(fields))
         {
             return BadRequest(_problemDetailsFactory.CreateProblemDetails(
@@ -130,13 +143,15 @@ public class AuthorsController : ControllerBase
             return NotFound();
         }
 
-        var linkResources = CreateLinkForAuthor(authorId, fields);
+        if (mediaTypeHeaderValue.MediaType == "application/api.son.hateoas+json")
+        {
+            var linkResources = CreateLinkForAuthor(authorId, fields);
 
-        var returnResources = _mapper.Map<AuthorDto>(authorFromRepo).ShapeData(fields) as IDictionary<string, object>;
-        returnResources.Add("links", linkResources);
-
-        // return author
-        return Ok(returnResources);
+            var returnResources = _mapper.Map<AuthorDto>(authorFromRepo).ShapeData(fields) as IDictionary<string, object>;
+            returnResources.Add("links", linkResources);
+            return Ok(returnResources);
+        }
+        return Ok(_mapper.Map<AuthorDto>(authorFromRepo));
     }
 
     [HttpPost("api/author/create")]
