@@ -4,6 +4,7 @@ using CourseLibrary.API.Helpers;
 using CourseLibrary.API.Models;
 using CourseLibrary.API.Profiles;
 using CourseLibrary.API.Services;
+using Marvin.Cache.Headers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using System.Net.Http.Headers;
@@ -12,6 +13,9 @@ using System.Text.Json;
 namespace CourseLibrary.API.Controllers;
 
 [ApiController]
+//[ResponseCache(CacheProfileName = "longCache")]
+[HttpCacheExpiration(CacheLocation = CacheLocation.Public, MaxAge = 60)]
+[HttpCacheValidation(MustRevalidate = true)]
 public class AuthorsController : ControllerBase
 {
     private readonly ICourseLibraryRepository _courseLibraryRepository;
@@ -113,6 +117,7 @@ public class AuthorsController : ControllerBase
         };
     }
 
+    //[ResponseCache(Duration = 60)]
     [HttpGet("api/author/{authorId}", Name = "GetAuthor")]
     public async Task<IActionResult> GetAuthor(
         Guid authorId,
